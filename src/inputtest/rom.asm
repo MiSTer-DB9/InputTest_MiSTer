@@ -1,6 +1,6 @@
 ;--------------------------------------------------------
-; File Created by SDCC : free open source ANSI-C Compiler
-; Version 4.0.0 #11528 (Linux)
+; File Created by SDCC : free open source ISO C Compiler 
+; Version 4.4.0 #14620 (Linux)
 ;--------------------------------------------------------
 	.module os
 	.optsdcc -mz80
@@ -40,6 +40,7 @@
 	.globl _bgcolram
 	.globl _fgcolram
 	.globl _chram
+	.globl _joy_mode
 	.globl _system_menu
 	.globl _system_pause
 	.globl _starfield3
@@ -79,6 +80,7 @@ _starfield2	=	0x8a10
 _starfield3	=	0x8a20
 _system_pause	=	0x8a30
 _system_menu	=	0x8a31
+_joy_mode	=	0x8a32
 _chram	=	0x9800
 _fgcolram	=	0xa000
 _bgcolram	=	0xa800
@@ -118,118 +120,128 @@ _musicram	=	0x8b10
 ; ---------------------------------
 _app_main::
 ;os.c:35: chram_size = chram_cols * chram_rows;
-	ld	hl,#_chram_rows + 0
-	ld	e, (hl)
-	ld	hl,#_chram_cols + 0
-	ld	h, (hl)
+	ld	a, (_chram_rows+0)
+	ld	e, a
+	ld	a, (_chram_cols+0)
+	ld	h, a
+;	spillPairReg hl
+;	spillPairReg hl
 	ld	l, #0x00
 	ld	d, l
 	ld	b, #0x08
-00233$:
+00275$:
 	add	hl, hl
-	jr	NC,00234$
+	jr	NC, 00276$
 	add	hl, de
-00234$:
-	djnz	00233$
+00276$:
+	djnz	00275$
 	ld	(_chram_size), hl
 ;os.c:36: while (1)
 00124$:
 ;os.c:38: hsync = input0 & 0x80;
-	ld	iy, #_input0
-	ld	a, 0 (iy)
-	rlc	a
+	ld	a, (_input0+0)
+	rlca
 	and	a, #0x01
+	ld	c, a
+	xor	a, a
+	cp	a, c
+	rla
 	ld	(_hsync+0), a
 ;os.c:39: vsync = input0 & 0x40;
-	ld	a, 0 (iy)
-	and	a, #0x40
+	ld	a, (_input0+0)
+	rlca
+	rlca
+	and	a, #0x01
 	ld	c, a
-	ld	b, #0x00
-	ld	a, b
-	or	a, c
-	add	a, #0xff
-	ld	a, #0x00
+	xor	a, a
+	cp	a, c
 	rla
 	ld	(_vsync+0), a
 ;os.c:40: hblank = CHECK_BIT(input0, INPUT_HBLANK);
-	ld	a, 0 (iy)
-	and	a, #0x20
+	ld	a, (_input0+0)
+	rlca
+	rlca
+	rlca
+	and	a, #0x01
 	ld	c, a
 	xor	a, a
 	cp	a, c
 	rla
 	ld	(_hblank+0), a
 ;os.c:41: vblank = CHECK_BIT(input0, INPUT_VBLANK);
-	ld	a, 0 (iy)
-	and	a, #0x10
+	ld	a, (_input0+0)
+	rrca
+	rrca
+	rrca
+	rrca
+	and	a, #0x01
 	ld	c, a
 	xor	a, a
 	cp	a, c
 	rla
 	ld	(_vblank+0), a
 ;os.c:42: switch (state)
-	ld	iy, #_state
-	ld	a, 0 (iy)
+	ld	a, (_state+0)
 	dec	a
 	jp	Z,00101$
-	ld	a, 0 (iy)
+	ld	a, (_state+0)
 	sub	a, #0x02
 	jp	Z,00102$
-	ld	a, 0 (iy)
+	ld	a, (_state+0)
 	sub	a, #0x03
 	jp	Z,00103$
-	ld	a, 0 (iy)
+	ld	a, (_state+0)
 	sub	a, #0x04
 	jp	Z,00104$
-	ld	a, 0 (iy)
+	ld	a, (_state+0)
 	sub	a, #0x05
 	jp	Z,00105$
-	ld	a, 0 (iy)
+	ld	a, (_state+0)
 	sub	a, #0x06
 	jp	Z,00106$
-	ld	a, 0 (iy)
+	ld	a, (_state+0)
 	sub	a, #0x07
-	jp	Z,00107$
-	ld	a, 0 (iy)
+	jr	Z, 00107$
+	ld	a, (_state+0)
 	sub	a, #0x08
-	jp	Z,00108$
-	ld	a, 0 (iy)
+	jr	Z, 00108$
+	ld	a, (_state+0)
 	sub	a, #0x09
-	jp	Z,00109$
-	ld	a, 0 (iy)
+	jr	Z, 00109$
+	ld	a, (_state+0)
 	sub	a, #0x0a
-	jp	Z,00110$
-	ld	a, 0 (iy)
+	jr	Z, 00110$
+	ld	a, (_state+0)
 	sub	a, #0x0b
-	jp	Z,00111$
-	ld	a, 0 (iy)
+	jr	Z, 00111$
+	ld	a, (_state+0)
 	sub	a, #0x0c
-	jp	Z,00112$
-	ld	a, 0 (iy)
+	jr	Z, 00112$
+	ld	a, (_state+0)
 	sub	a, #0x14
-	jr	Z,00113$
-	ld	a, 0 (iy)
+	jr	Z, 00113$
+	ld	a, (_state+0)
 	sub	a, #0x16
-	jr	Z,00114$
-	ld	a, 0 (iy)
+	jr	Z, 00114$
+	ld	a, (_state+0)
 	sub	a, #0x1e
-	jr	Z,00115$
-	ld	a, 0 (iy)
+	jr	Z, 00115$
+	ld	a, (_state+0)
 	sub	a, #0x1f
-	jp	Z,00116$
-	ld	a, 0 (iy)
+	jr	Z, 00116$
+	ld	a, (_state+0)
 	sub	a, #0x28
-	jp	Z,00118$
-	ld	a, 0 (iy)
+	jr	Z, 00118$
+	ld	a, (_state+0)
 	sub	a, #0x29
-	jp	Z,00119$
-	ld	a, 0 (iy)
+	jr	Z, 00119$
+	ld	a, (_state+0)
 	sub	a, #0x2a
-	jr	Z,00117$
-	ld	a, 0 (iy)
+	jr	Z, 00117$
+	ld	a, (_state+0)
 	sub	a, #0x2b
-	jr	Z,00120$
-	jp	00121$
+	jr	Z, 00120$
+	jr	00121$
 ;os.c:44: case STATE_START_INPUTTESTER:
 00101$:
 ;os.c:45: start_inputtester_digital();
@@ -241,25 +253,25 @@ _app_main::
 ;os.c:48: inputtester_digital();
 	call	_inputtester_digital
 ;os.c:49: break;
-	jp	00122$
+	jr	00122$
 ;os.c:51: case STATE_START_INPUTTESTERADVANCED:
 00103$:
 ;os.c:52: start_inputtester_advanced();
 	call	_start_inputtester_advanced
 ;os.c:53: break;
-	jp	00122$
+	jr	00122$
 ;os.c:54: case STATE_INPUTTESTERADVANCED:
 00104$:
 ;os.c:55: inputtester_advanced();
 	call	_inputtester_advanced
 ;os.c:56: break;
-	jp	00122$
+	jr	00122$
 ;os.c:58: case STATE_START_INPUTTESTERANALOG:
 00105$:
 ;os.c:59: start_inputtester_analog();
 	call	_start_inputtester_analog
 ;os.c:60: break;
-	jp	00122$
+	jr	00122$
 ;os.c:61: case STATE_INPUTTESTERANALOG:
 00106$:
 ;os.c:62: inputtester_analog();
@@ -317,13 +329,11 @@ _app_main::
 ;os.c:93: case STATE_START_ATTRACT:
 00115$:
 ;os.c:94: state = 0;
-	ld	hl,#_state + 0
+	ld	hl, #_state
 	ld	(hl), #0x00
 ;os.c:95: loader("SNEK.AZN");
 	ld	hl, #___str_0
-	push	hl
 	call	_loader
-	pop	af
 ;os.c:96: start_snek_attract();
 	call	_start_snek_attract
 ;os.c:97: break;
@@ -355,13 +365,11 @@ _app_main::
 ;os.c:111: case STATE_START_ZORBLAXX:
 00120$:
 ;os.c:112: state = 0;
-	ld	hl,#_state + 0
+	ld	hl, #_state
 	ld	(hl), #0x00
 ;os.c:113: loader("ZORBLAXX.AZN");
 	ld	hl, #___str_1
-	push	hl
 	call	_loader
-	pop	af
 ;os.c:114: app_zorblaxx();
 	call	_app_zorblaxx
 ;os.c:115: break;
@@ -370,29 +378,23 @@ _app_main::
 00121$:
 ;os.c:122: loader("INPUTTESTER.AZN");
 	ld	hl, #___str_2
-	push	hl
 	call	_loader
-	pop	af
 ;os.c:123: start_inputtester_digital();
 	call	_start_inputtester_digital
 ;os.c:128: }
 00122$:
 ;os.c:130: hsync_last = hsync;
-	ld	a,(#_hsync + 0)
-	ld	iy, #_hsync_last
-	ld	0 (iy), a
+	ld	a, (_hsync+0)
+	ld	(_hsync_last+0), a
 ;os.c:131: vsync_last = vsync;
-	ld	a,(#_vsync + 0)
-	ld	iy, #_vsync_last
-	ld	0 (iy), a
+	ld	a, (_vsync+0)
+	ld	(_vsync_last+0), a
 ;os.c:132: hblank_last = hblank;
-	ld	a,(#_hblank + 0)
-	ld	iy, #_hblank_last
-	ld	0 (iy), a
+	ld	a, (_hblank+0)
+	ld	(_hblank_last+0), a
 ;os.c:133: vblank_last = vblank;
-	ld	a,(#_vblank + 0)
-	ld	iy, #_vblank_last
-	ld	0 (iy), a
+	ld	a, (_vblank+0)
+	ld	(_vblank_last+0), a
 ;os.c:135: }
 	jp	00124$
 ___str_0:

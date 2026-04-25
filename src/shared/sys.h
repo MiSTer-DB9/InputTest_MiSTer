@@ -44,6 +44,11 @@ unsigned char __at(0x8A10) starfield2[5];
 unsigned char __at(0x8A20) starfield3[5];
 unsigned char __at(0x8A30) system_pause;
 unsigned char __at(0x8A31) system_menu;
+// [MiSTer-DB9 BEGIN] - DB9/SNAC8 support
+unsigned char __at(0x8A32) joy_mode; // bit2: DB9MD, bit1: DB15
+#define JOY_MODE_DB9MD 2
+#define JOY_MODE_DB15  1
+// [MiSTer-DB9 END]
 
 // - Casval (character map)
 unsigned char __at(0x9800) chram[2048];

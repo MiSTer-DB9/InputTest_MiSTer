@@ -93,6 +93,46 @@ void draw_pad(char xo, char yo)
 	write_char(char_corner_round_tr, color_pad_outline, xo + 25, yo);
 }
 
+// [MiSTer-DB9 BEGIN] - DB9/SNAC8 support
+// Draw 6-button pad outline (Genesis / NeoGeo style — no L/R shoulders).
+// show_md_box: true → top-right Mode box (Megadrive); false → body only (DB15).
+void draw_pad_md(char xo, char yo, bool show_md_box)
+{
+	// Outline (same body as draw_pad — top edge starts directly at row yo+2)
+	write_char(char_corner_round_tl, color_pad_outline, xo, yo + 2);
+	write_char_row(char_line_h, color_pad_outline, xo + 1, yo + 2, 25);
+	write_char(char_corner_round_tr, color_pad_outline, xo + 26, yo + 2);
+	for (char y = 3; y < 8; y++)
+	{
+		write_char(char_line_v, color_pad_outline, xo, yo + y);
+		write_char(char_line_v, color_pad_outline, xo + 26, yo + y);
+	}
+	write_char(char_corner_round_bl, color_pad_outline, xo, yo + 8);
+	write_char(char_corner_round_br, color_pad_outline, xo + 26, yo + 8);
+
+	write_char(char_corner_round_br, color_pad_outline, xo + 8, yo + 8);
+	write_char(char_corner_round_bl, color_pad_outline, xo + 18, yo + 8);
+	write_char(char_corner_round_tl, color_pad_outline, xo + 8, yo + 7);
+	write_char(char_corner_round_tr, color_pad_outline, xo + 18, yo + 7);
+
+	write_char_row(char_line_h, color_pad_outline, xo + 1, yo + 8, 7);
+	write_char_row(char_line_h, color_pad_outline, xo + 9, yo + 7, 9);
+	write_char_row(char_line_h, color_pad_outline, xo + 19, yo + 8, 7);
+
+	if (show_md_box)
+	{
+		// Mode button box (top-right, 6-wide so "Mode" sits centered with 1-col margins)
+		write_char(char_line_v, color_pad_outline, xo + 20, yo + 1);
+		write_char(char_t_up, color_pad_outline, xo + 20, yo + 2);
+		write_char(char_corner_round_tl, color_pad_outline, xo + 20, yo);
+		write_char_row(char_line_h, color_pad_outline, xo + 21, yo, 4);
+		write_char(char_line_v, color_pad_outline, xo + 25, yo + 1);
+		write_char(char_t_up, color_pad_outline, xo + 25, yo + 2);
+		write_char(char_corner_round_tr, color_pad_outline, xo + 25, yo);
+	}
+}
+// [MiSTer-DB9 END]
+
 // Draw game pad outline
 void draw_analog(char xo, char yo, char xs, char ys)
 {
