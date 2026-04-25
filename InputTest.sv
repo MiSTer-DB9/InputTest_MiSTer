@@ -467,6 +467,9 @@ system system(
 	.dn_wr(ioctl_wr),
 	.dn_index(ioctl_index),
 	.joystick({joystick_5,joystick_4,joystick_3,joystick_2,joystick_1,joystick_0}),
+	// [MiSTer-DB9 BEGIN] - DB9/SNAC8 support
+	.joy_mode(JOY_FLAG),
+	// [MiSTer-DB9 END]
 	.analog_l({joystick_l_analog_5,joystick_l_analog_4,joystick_l_analog_3,joystick_l_analog_2,joystick_l_analog_1,joystick_l_analog_0}),
 	.analog_r({joystick_r_analog_5,joystick_r_analog_4,joystick_r_analog_3,joystick_r_analog_2,joystick_r_analog_1,joystick_r_analog_0}),
  	.paddle({paddle_5,paddle_4,paddle_3,paddle_2,paddle_1,paddle_0}),

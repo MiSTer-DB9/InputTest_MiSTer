@@ -100,6 +100,26 @@ char button_name[BUTTON_COUNT][12] = {
     "Start"};
 char button_x[BUTTON_COUNT] = {6, 2, 4, 4, 24, 22, 22, 20, 3, 23, 9, 13};
 char button_y[BUTTON_COUNT] = {5, 5, 6, 4, 5, 6, 4, 5, 1, 1, 5, 5};
+
+// [MiSTer-DB9 BEGIN] - DB9/SNAC8 support
+// Genesis 6-button (R L D U A B C X Y Z Mode Start)
+// Mode sits where the R shoulder is on a real Megadrive controller (top-right of body).
+char button_symbol_md[BUTTON_COUNT][6] = {"R","L","D","U","A","B","C","X","Y","Z","Mode","Start"};
+char button_x_md[BUTTON_COUNT]         = {  6,  2,  4,  4, 20, 22, 24, 20, 22, 24, 21, 11};
+char button_y_md[BUTTON_COUNT]         = {  5,  5,  6,  4,  6,  6,  6,  4,  4,  4,  1,  5};
+
+// NeoGeo / DB15 (R L D U A B C D E F Sel Start)
+char button_symbol_db15[BUTTON_COUNT][6] = {"R","L","D","U","A","B","C","D","E","F","Sel","Start"};
+char button_x_db15[BUTTON_COUNT]         = {  6,  2,  4,  4, 20, 22, 24, 20, 22, 24,  9, 13};
+char button_y_db15[BUTTON_COUNT]         = {  5,  5,  6,  4,  6,  6,  6,  4,  4,  4,  5,  5};
+
+// Active layout pointers — reassigned in page_inputtester_digital() based on joy_mode.
+char (*active_symbol)[6] = button_symbol;
+char *active_x = button_x;
+char *active_y = button_y;
+// Last-seen joy_mode bits (DB9MD|DB15) to detect runtime changes and trigger redraw.
+unsigned char joy_mode_last = 0xFF;
+// [MiSTer-DB9 END]
 #define color_button_active 0xFF
 #define color_button_inactive 0b01010010
 
@@ -162,11 +182,22 @@ unsigned char gunsight_crosshair_index = 15;
 void page_inputtester_digital()
 {
     page_frame(true, false);
+    // [MiSTer-DB9 BEGIN] - DB9/SNAC8 support: pick layout based on UserIO Joystick mode
+    bool md = CHECK_BIT(joy_mode, JOY_MODE_DB9MD);
+    bool db15 = !md && CHECK_BIT(joy_mode, JOY_MODE_DB15);
+    if (md) { active_symbol = button_symbol_md; active_x = button_x_md; active_y = button_y_md; }
+    else if (db15) { active_symbol = button_symbol_db15; active_x = button_x_db15; active_y = button_y_db15; }
+    else { active_symbol = button_symbol; active_x = button_x; active_y = button_y; }
+    joy_mode_last = joy_mode;
+    // [MiSTer-DB9 END]
     // Draw pads
     for (char j = 0; j < PAD_COUNT; j++)
     {
         write_stringf("JOY %d", 0xFF, pad_offset_x[j] - 5, pad_offset_y[j] + 5, j + 1);
-        draw_pad(pad_offset_x[j], pad_offset_y[j]);
+        // [MiSTer-DB9 BEGIN] - DB9/SNAC8 support: alt pad shapes
+        if (md || db15) draw_pad_md(pad_offset_x[j], pad_offset_y[j], md);
+        else draw_pad(pad_offset_x[j], pad_offset_y[j]);
+        // [MiSTer-DB9 END]
     }
 }
 
@@ -466,6 +497,14 @@ void inputtester_digital()
             return;
         }
 
+        // [MiSTer-DB9 BEGIN] - DB9/SNAC8 support: redraw page if UserIO Joystick mode changed live
+        if (joy_mode != joy_mode_last)
+        {
+            page_inputtester_digital();
+            return;
+        }
+        // [MiSTer-DB9 END]
+
         // Draw control pad buttons
         for (char joy = 0; joy < PAD_COUNT; joy++)
         {
@@ -473,7 +512,7 @@ void inputtester_digital()
             for (char button = 0; button < BUTTON_COUNT; button++)
             {
                 char color = (button < 8 ? CHECK_BIT(joystick[index], button) : CHECK_BIT(joystick[index + 1], button - 8)) ? color_button_active : color_button_inactive;
-                write_string(button_symbol[button], color, pad_offset_x[joy] + button_x[button], pad_offset_y[joy] + button_y[button]);
+                write_string(active_symbol[button], color, pad_offset_x[joy] + active_x[button], pad_offset_y[joy] + active_y[button]);
             }
             // SOCD detection
             socd_lr[joy] = CHECK_BIT(joystick[index], 0) && CHECK_BIT(joystick[index], 1);

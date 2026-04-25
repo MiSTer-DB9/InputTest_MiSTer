@@ -35,6 +35,11 @@ module system (
 	// 6 devices, 32 buttons each
 	input [191:0]	joystick,
 
+	// [MiSTer-DB9 BEGIN] - DB9/SNAC8 support
+	// {DB9MD, DB15, 2P} from JOY_FLAG
+	input [2:0]		joy_mode,
+	// [MiSTer-DB9 END]
+
 	// 6 devices, 16 bits each - -127..+127, Y: [15:8], X: [7:0]
 	input [95:0]	analog_l,
 
@@ -147,6 +152,9 @@ wire starfield2_cs = memory_map_addr == 8'b10001010 && cpu_addr[5:4] == 2'b01;
 wire starfield3_cs = memory_map_addr == 8'b10001010 && cpu_addr[5:4] == 2'b10;
 wire system_pause_cs = cpu_addr == 16'b1000101000110000;
 wire system_menu_cs = cpu_addr == 16'b1000101000110001;
+// [MiSTer-DB9 BEGIN] - DB9/SNAC8 support
+wire joy_mode_cs = cpu_addr == 16'b1000101000110010; // 0x8A32
+// [MiSTer-DB9 END]
 wire sound_cs = cpu_addr[15:4] == 12'b100010110000;
 wire music_cs = cpu_addr[15:4] == 12'b100010110001;
 
@@ -281,6 +289,9 @@ assign cpu_din = pgrom_cs ? pgrom_data_out :
 				 tilemapcontrol_cs ? tilemapcontrol_data_out :
 				 music_cs ? music_data_out :
 				 system_menu_cs ? {8{menu_trigger}} :
+				 // [MiSTer-DB9 BEGIN] - DB9/SNAC8 support
+				 joy_mode_cs ? {5'b0, joy_mode} :
+				 // [MiSTer-DB9 END]
 				 8'b00000000;
 
 // CPU control signals
