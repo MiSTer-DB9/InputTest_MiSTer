@@ -169,8 +169,12 @@ module emu
 	// 1 - D-/TX
 	// 2..6 - USR2..USR6
 	// Set USER_OUT to 1 to read from USER_IN.
-	input   [6:0] USER_IN,
-	output  [6:0] USER_OUT,
+	// [MiSTer-DB9 BEGIN] - DB9/SNAC8 support
+	output        USER_OSD,
+	output  [1:0] USER_MODE,
+	input   [7:0] USER_IN,
+	output  [7:0] USER_OUT,
+	// [MiSTer-DB9 END]
 
 	input         OSD_STATUS
 );
@@ -178,7 +182,17 @@ module emu
 ///////// Default values for ports not used in this core /////////
 
 assign ADC_BUS  = 'Z;
-assign USER_OUT = '1;
+// [MiSTer-DB9 BEGIN] - DB9/SNAC8 support
+wire         CLK_JOY = CLK_50M;
+// 2-player always enabled (UserIO Players option removed); bit 0 hardcoded to 1.
+wire   [2:0] JOY_FLAG  = {status[30],status[31],1'b1};
+wire         JOY_CLK, JOY_LOAD, JOY_SPLIT, JOY_MDSEL;
+wire   [5:0] JOY_MDIN  = JOY_FLAG[2] ? {USER_IN[6],USER_IN[3],USER_IN[5],USER_IN[7],USER_IN[1],USER_IN[2]} : '1;
+wire         JOY_DATA  = JOY_FLAG[1] ? USER_IN[5] : '1;
+assign       USER_OUT  = JOY_FLAG[2] ? {3'b111,JOY_SPLIT,3'b111,JOY_MDSEL} : JOY_FLAG[1] ? {6'b111111,JOY_CLK,JOY_LOAD} : '1;
+assign       USER_MODE = JOY_FLAG[2:1];
+assign       USER_OSD  = joydb_1[10] & joydb_1[6];
+// [MiSTer-DB9 END]
 assign {UART_RTS, UART_TXD, UART_DTR} = 0;
 assign {SD_SCK, SD_MOSI, SD_CS} = 'Z;
 assign {SDRAM_DQ, SDRAM_A, SDRAM_BA, SDRAM_CLK, SDRAM_CKE, SDRAM_DQML, SDRAM_DQMH, SDRAM_nWE, SDRAM_nCAS, SDRAM_nRAS, SDRAM_nCS} = 'Z;
@@ -214,7 +228,11 @@ localparam CONF_STR = {
 	"-;",
 	"O6,Rotate video,Off,On;",
 	"O7,Flip video,Off,On;",
-	"-;",	
+	"-;",
+	// [MiSTer-DB9 BEGIN] - DB9/SNAC8 support
+	"OUV,UserIO Joystick,Off,DB9MD,DB15;",
+	"-;",
+	// [MiSTer-DB9 END]
 	"RA,Open menu;",
 	"-;",
 	"F0,BIN,Load BIOS;",
@@ -239,8 +257,39 @@ wire [24:0] ioctl_addr;
 wire  [7:0] ioctl_dout;
 wire  [7:0] ioctl_index;
 
-wire [31:0] joystick_0;
-wire [31:0] joystick_1;
+// [MiSTer-DB9 BEGIN] - DB9/SNAC8 support
+wire [31:0] joystick_0_USB, joystick_1_USB;
+wire [11:0] joydb_1, joydb_2;
+wire        joydb_1ena = |JOY_FLAG[2:1];
+wire        joydb_2ena = joydb_1ena; // 2-player always enabled
+
+wire [11:0] JOYDB9MD_1, JOYDB9MD_2;
+wire [15:0] JOYDB15_1, JOYDB15_2;
+assign joydb_1 = JOY_FLAG[2] ? JOYDB9MD_1 : JOY_FLAG[1] ? JOYDB15_1[11:0] : 12'b0;
+assign joydb_2 = JOY_FLAG[2] ? JOYDB9MD_2 : JOY_FLAG[1] ? JOYDB15_2[11:0] : 12'b0;
+
+joy_db9md joy_db9md (
+	.clk       (CLK_JOY),
+	.joy_split (JOY_SPLIT),
+	.joy_mdsel (JOY_MDSEL),
+	.joy_in    (JOY_MDIN),
+	.joystick1 (JOYDB9MD_1),
+	.joystick2 (JOYDB9MD_2)
+);
+joy_db15 joy_db15 (
+	.clk       (CLK_JOY),
+	.JOY_CLK   (JOY_CLK),
+	.JOY_DATA  (JOY_DATA),
+	.JOY_LOAD  (JOY_LOAD),
+	.joystick1 (JOYDB15_1),
+	.joystick2 (JOYDB15_2)
+);
+
+// Diagnostic intent: each slot shows only its own port (no cross-routing of USB pad 0 → joystick_1).
+// joydb bits 11/10 = Mode|Select / Start; CONF_STR expects bits 11/10 = Start / Select — swap.
+wire [31:0] joystick_0 = joydb_1ena ? {20'b0, joydb_1[10], joydb_1[11], joydb_1[9:0]} : joystick_0_USB;
+wire [31:0] joystick_1 = joydb_2ena ? {20'b0, joydb_2[10], joydb_2[11], joydb_2[9:0]} : joystick_1_USB;
+// [MiSTer-DB9 END]
 wire [31:0] joystick_2;
 wire [31:0] joystick_3;
 wire [31:0] joystick_4;
@@ -291,8 +340,11 @@ hps_io #(.CONF_STR(CONF_STR)) hps_io
 	.ioctl_dout(ioctl_dout),
 	.ioctl_index(ioctl_index),
 
-	.joystick_0(joystick_0),
-	.joystick_1(joystick_1),
+	// [MiSTer-DB9 BEGIN] - DB9/SNAC8 support
+	.joystick_0(joystick_0_USB),
+	.joystick_1(joystick_1_USB),
+	.joy_raw(OSD_STATUS ? ({USER_MODE, joydb_1 | joydb_2}) : 14'b0),
+	// [MiSTer-DB9 END]
 	.joystick_2(joystick_2),
 	.joystick_3(joystick_3),
 	.joystick_4(joystick_4),
