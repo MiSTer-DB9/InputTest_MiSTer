@@ -10,6 +10,7 @@ do
 done
 echo "verilator -cc --compiler msvc $DEFINES $WARNINGS $OPTIMIZE"
 verilator -cc --compiler msvc $DEFINES $WARNINGS $OPTIMIZE \
+--no-timing \
 --converge-limit 6000 \
 --top-module emu sim.v \
 -I../rtl \
