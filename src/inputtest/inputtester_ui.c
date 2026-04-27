@@ -94,9 +94,30 @@ void draw_pad(char xo, char yo)
 }
 
 // [MiSTer-DB9 BEGIN] - DB9/SNAC8 support
-// Draw 6-button pad outline (Genesis / NeoGeo style — no L/R shoulders).
-// show_md_box: true → top-right Mode box (Megadrive); false → body only (DB15).
-void draw_pad_md(char xo, char yo, bool show_md_box)
+// USB-style L+R shoulder boxes (cols 1..5 and 21..25, top-aligned).
+// Geometry mirrors draw_pad's shoulder block; kept separate to avoid touching upstream draw_pad.
+static void draw_lr_shoulder_boxes(char xo, char yo)
+{
+	write_char(char_line_v, color_pad_outline, xo + 1, yo + 1);
+	write_char(char_t_up, color_pad_outline, xo + 1, yo + 2);
+	write_char(char_corner_round_tl, color_pad_outline, xo + 1, yo);
+	write_char_row(char_line_h, color_pad_outline, xo + 2, yo, 3);
+	write_char(char_line_v, color_pad_outline, xo + 5, yo + 1);
+	write_char(char_t_up, color_pad_outline, xo + 5, yo + 2);
+	write_char(char_corner_round_tr, color_pad_outline, xo + 5, yo);
+	write_char(char_line_v, color_pad_outline, xo + 21, yo + 1);
+	write_char(char_t_up, color_pad_outline, xo + 21, yo + 2);
+	write_char(char_corner_round_tl, color_pad_outline, xo + 21, yo);
+	write_char_row(char_line_h, color_pad_outline, xo + 22, yo, 3);
+	write_char(char_line_v, color_pad_outline, xo + 25, yo + 1);
+	write_char(char_t_up, color_pad_outline, xo + 25, yo + 2);
+	write_char(char_corner_round_tr, color_pad_outline, xo + 25, yo);
+}
+
+// Draw 6-button pad outline (Genesis / NeoGeo / Saturn style).
+// show_md_box: top-right Mode box (Megadrive).
+// show_lr_shoulders: USB-style L+R shoulder boxes (Saturn).
+void draw_pad_md(char xo, char yo, bool show_md_box, bool show_lr_shoulders)
 {
 	// Outline (same body as draw_pad — top edge starts directly at row yo+2)
 	write_char(char_corner_round_tl, color_pad_outline, xo, yo + 2);
@@ -130,6 +151,10 @@ void draw_pad_md(char xo, char yo, bool show_md_box)
 		write_char(char_t_up, color_pad_outline, xo + 25, yo + 2);
 		write_char(char_corner_round_tr, color_pad_outline, xo + 25, yo);
 	}
+
+	// [MiSTer-DB9-Pro BEGIN] - Saturn L/R shoulder boxes
+	if (show_lr_shoulders) draw_lr_shoulder_boxes(xo, yo);
+	// [MiSTer-DB9-Pro END]
 }
 // [MiSTer-DB9 END]
 
