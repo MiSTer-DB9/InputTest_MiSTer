@@ -36,7 +36,7 @@ module system (
 	input [191:0]	joystick,
 
 	// [MiSTer-DB9 BEGIN] - DB9/SNAC8 support
-	// {DB9MD, DB15, 2P} from JOY_FLAG
+	// {DB9MD, DB15, Saturn} from joy_type
 	input [2:0]		joy_mode,
 	// [MiSTer-DB9 END]
 

@@ -36,3 +36,5 @@ set_global_assignment -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) h
 set_global_assignment -name VERILOG_FILE       [file join $::quartus(qip_path) joydb9md.v ]
 set_global_assignment -name VERILOG_FILE       [file join $::quartus(qip_path) joydb15.v ]
 # [MiSTer-DB9 END]
+set_global_assignment -name VERILOG_FILE        [file join $::quartus(qip_path) joydb9saturn.v ]
+set_global_assignment -name SYSTEMVERILOG_FILE  [file join $::quartus(qip_path) joydb.sv ]

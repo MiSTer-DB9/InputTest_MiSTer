@@ -68,7 +68,9 @@ char modeswitchtimer_start = 0;
 char history[HISTORY_LENGTH];
 
 #define PAD_COUNT 2
-#define BUTTON_COUNT 12
+// [MiSTer-DB9-Pro BEGIN] - bumped 12→14 to host Saturn L/R trigger slots at 12/13
+#define BUTTON_COUNT 14
+// [MiSTer-DB9-Pro END]
 
 char pad_offset_x[PAD_COUNT] = {7, 7};
 char pad_offset_y[PAD_COUNT] = {5, 16};
@@ -84,7 +86,12 @@ char button_symbol[BUTTON_COUNT][6] = {
     "L",
     "R",
     "Sel",
-    "Start"};
+    "Start",
+    // [MiSTer-DB9-Pro BEGIN] - slots 12/13 reserved for Saturn L/R triggers
+    "",
+    ""
+    // [MiSTer-DB9-Pro END]
+    };
 char button_name[BUTTON_COUNT][12] = {
     "DPAD Right",
     "DPAD Left",
@@ -97,27 +104,40 @@ char button_name[BUTTON_COUNT][12] = {
     "L",
     "R",
     "Select",
-    "Start"};
-char button_x[BUTTON_COUNT] = {6, 2, 4, 4, 24, 22, 22, 20, 3, 23, 9, 13};
-char button_y[BUTTON_COUNT] = {5, 5, 6, 4, 5, 6, 4, 5, 1, 1, 5, 5};
+    "Start",
+    // [MiSTer-DB9-Pro BEGIN] - slots 12/13 reserved for Saturn L/R triggers
+    "L Trigger",
+    "R Trigger"
+    // [MiSTer-DB9-Pro END]
+    };
+char button_x[BUTTON_COUNT] = {6, 2, 4, 4, 24, 22, 22, 20, 3, 23, 9, 13, 0, 0};
+char button_y[BUTTON_COUNT] = {5, 5, 6, 4,  5,  6,  4,  5, 1,  1, 5,  5, 0, 0};
 
 // [MiSTer-DB9 BEGIN] - DB9/SNAC8 support
-// Genesis 6-button (R L D U A B C X Y Z Mode Start)
+// Genesis 6-button (R L D U A B C X Y Z Mode Start) — slots 12/13 unused
 // Mode sits where the R shoulder is on a real Megadrive controller (top-right of body).
-char button_symbol_md[BUTTON_COUNT][6] = {"R","L","D","U","A","B","C","X","Y","Z","Mode","Start"};
-char button_x_md[BUTTON_COUNT]         = {  6,  2,  4,  4, 20, 22, 24, 20, 22, 24, 21, 11};
-char button_y_md[BUTTON_COUNT]         = {  5,  5,  6,  4,  6,  6,  6,  4,  4,  4,  1,  5};
+char button_symbol_md[BUTTON_COUNT][6] = {"R","L","D","U","A","B","C","X","Y","Z","Mode","Start","",""};
+char button_x_md[BUTTON_COUNT]         = {  6,  2,  4,  4, 20, 22, 24, 20, 22, 24,   21,    11, 0, 0};
+char button_y_md[BUTTON_COUNT]         = {  5,  5,  6,  4,  6,  6,  6,  4,  4,  4,    1,     5, 0, 0};
 
-// NeoGeo / DB15 (R L D U A B C D E F Sel Start)
-char button_symbol_db15[BUTTON_COUNT][6] = {"R","L","D","U","A","B","C","D","E","F","Sel","Start"};
-char button_x_db15[BUTTON_COUNT]         = {  6,  2,  4,  4, 20, 22, 24, 20, 22, 24,  9, 13};
-char button_y_db15[BUTTON_COUNT]         = {  5,  5,  6,  4,  6,  6,  6,  4,  4,  4,  5,  5};
+// NeoGeo / DB15 (R L D U A B C D E F Sel Start) — slots 12/13 unused
+char button_symbol_db15[BUTTON_COUNT][6] = {"R","L","D","U","A","B","C","D","E","F","Sel","Start","",""};
+char button_x_db15[BUTTON_COUNT]         = {  6,  2,  4,  4, 20, 22, 24, 20, 22, 24,    9,    13, 0, 0};
+char button_y_db15[BUTTON_COUNT]         = {  5,  5,  6,  4,  6,  6,  6,  4,  4,  4,    5,     5, 0, 0};
+// [MiSTer-DB9 END]
 
+// [MiSTer-DB9-Pro BEGIN] - Saturn layout: dpad + ABC/XYZ face + Start at slot 11, L at slot 12 (joydb_1[12]), R at slot 13 (joydb_1[13])
+char button_symbol_saturn[BUTTON_COUNT][6] = {"R","L","D","U","A","B","C","X","Y","Z","","Start","L","R"};
+char button_x_saturn[BUTTON_COUNT]         = {  6,  2,  4,  4, 20, 22, 24, 20, 22, 24, 0,    11,  3, 23};
+char button_y_saturn[BUTTON_COUNT]         = {  5,  5,  6,  4,  6,  6,  6,  4,  4,  4, 0,     5,  1,  1};
+// [MiSTer-DB9-Pro END]
+
+// [MiSTer-DB9 BEGIN] - DB9/SNAC8 support: active layout pointers
 // Active layout pointers — reassigned in page_inputtester_digital() based on joy_mode.
 char (*active_symbol)[6] = button_symbol;
 char *active_x = button_x;
 char *active_y = button_y;
-// Last-seen joy_mode bits (DB9MD|DB15) to detect runtime changes and trigger redraw.
+// Last-seen joy_mode bits (DB9MD|DB15|Saturn) to detect runtime changes and trigger redraw.
 unsigned char joy_mode_last = 0xFF;
 // [MiSTer-DB9 END]
 #define color_button_active 0xFF
@@ -185,9 +205,13 @@ void page_inputtester_digital()
     // [MiSTer-DB9 BEGIN] - DB9/SNAC8 support: pick layout based on UserIO Joystick mode
     bool md = CHECK_BIT(joy_mode, JOY_MODE_DB9MD);
     bool db15 = !md && CHECK_BIT(joy_mode, JOY_MODE_DB15);
+    // [MiSTer-DB9-Pro BEGIN] - Saturn layout selection
+    bool saturn = !md && !db15 && CHECK_BIT(joy_mode, JOY_MODE_SATURN);
     if (md) { active_symbol = button_symbol_md; active_x = button_x_md; active_y = button_y_md; }
     else if (db15) { active_symbol = button_symbol_db15; active_x = button_x_db15; active_y = button_y_db15; }
+    else if (saturn) { active_symbol = button_symbol_saturn; active_x = button_x_saturn; active_y = button_y_saturn; }
     else { active_symbol = button_symbol; active_x = button_x; active_y = button_y; }
+    // [MiSTer-DB9-Pro END]
     joy_mode_last = joy_mode;
     // [MiSTer-DB9 END]
     // Draw pads
@@ -195,7 +219,9 @@ void page_inputtester_digital()
     {
         write_stringf("JOY %d", 0xFF, pad_offset_x[j] - 5, pad_offset_y[j] + 5, j + 1);
         // [MiSTer-DB9 BEGIN] - DB9/SNAC8 support: alt pad shapes
-        if (md || db15) draw_pad_md(pad_offset_x[j], pad_offset_y[j], md);
+        // [MiSTer-DB9-Pro BEGIN] - Saturn uses MD body + USB-style L/R shoulder boxes
+        if (md || db15 || saturn) draw_pad_md(pad_offset_x[j], pad_offset_y[j], md, saturn);
+        // [MiSTer-DB9-Pro END]
         else draw_pad(pad_offset_x[j], pad_offset_y[j]);
         // [MiSTer-DB9 END]
     }

@@ -1,4 +1,4 @@
-SDCC=sdcc
+SDCC=sdcc-sdcc
 CPU=z80
 DATALOC=0xC000
 

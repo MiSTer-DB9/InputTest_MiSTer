@@ -171,7 +171,9 @@ module emu
 	// Set USER_OUT to 1 to read from USER_IN.
 	// [MiSTer-DB9 BEGIN] - DB9/SNAC8 support
 	output        USER_OSD,
-	output  [1:0] USER_MODE,
+	// [MiSTer-DB9-Pro BEGIN] - Saturn push-pull override
+	output  [7:0] USER_PP,
+	// [MiSTer-DB9-Pro END]
 	input   [7:0] USER_IN,
 	output  [7:0] USER_OUT,
 	// [MiSTer-DB9 END]
@@ -179,20 +181,46 @@ module emu
 	input         OSD_STATUS
 );
 
+
 ///////// Default values for ports not used in this core /////////
 
 assign ADC_BUS  = 'Z;
-// [MiSTer-DB9 BEGIN] - DB9/SNAC8 support
+
+// [MiSTer-DB9 BEGIN] - DB9/SNAC8 support: joydb wrapper
 wire         CLK_JOY = CLK_50M;
-// 2-player always enabled (UserIO Players option removed); bit 0 hardcoded to 1.
-wire   [2:0] JOY_FLAG  = {status[30],status[31],1'b1};
-wire         JOY_CLK, JOY_LOAD, JOY_SPLIT, JOY_MDSEL;
-wire   [5:0] JOY_MDIN  = JOY_FLAG[2] ? {USER_IN[6],USER_IN[3],USER_IN[5],USER_IN[7],USER_IN[1],USER_IN[2]} : '1;
-wire         JOY_DATA  = JOY_FLAG[1] ? USER_IN[5] : '1;
-assign       USER_OUT  = JOY_FLAG[2] ? {3'b111,JOY_SPLIT,3'b111,JOY_MDSEL} : JOY_FLAG[1] ? {6'b111111,JOY_CLK,JOY_LOAD} : '1;
-assign       USER_MODE = JOY_FLAG[2:1];
-assign       USER_OSD  = joydb_1[10] & joydb_1[6];
+wire   [1:0] joy_type        = status[127:126]; // 0=Off, 1=Saturn, 2=DB9MD, 3=DB15
+wire         joy_2p          = 1'b1; // 2-player always enabled (UserIO Players option removed)
 // [MiSTer-DB9 END]
+
+// [MiSTer-DB9 BEGIN] - DB9/SNAC8 support: joydb wrapper wires + instance
+// Saturn always-on in this diagnostic core (no key gate).
+wire   [7:0] USER_OUT_DRIVE;
+wire   [7:0] USER_PP_DRIVE;
+wire  [15:0] joydb_1, joydb_2;
+wire         joydb_1ena, joydb_2ena;
+wire  [15:0] joy_raw_payload;
+
+joydb joydb (
+  .clk             ( CLK_JOY         ),
+  .USER_IN         ( USER_IN         ),
+  .joy_type        ( joy_type        ),
+  .joy_2p          ( joy_2p          ),
+  .saturn_unlocked ( 1'b1            ),
+  .USER_OUT_DRIVE  ( USER_OUT_DRIVE  ),
+  .USER_PP_DRIVE   ( USER_PP_DRIVE   ),
+  .USER_OSD        ( USER_OSD        ),
+  .joydb_1         ( joydb_1         ),
+  .joydb_2         ( joydb_2         ),
+  .joydb_1ena      ( joydb_1ena      ),
+  .joydb_2ena      ( joydb_2ena      ),
+  .joy_raw         ( joy_raw_payload )
+);
+
+assign USER_OUT = USER_OUT_DRIVE;
+// [MiSTer-DB9 END]
+// [MiSTer-DB9-Pro BEGIN] - Saturn push-pull override
+assign USER_PP = USER_PP_DRIVE;
+// [MiSTer-DB9-Pro END]
 assign {UART_RTS, UART_TXD, UART_DTR} = 0;
 assign {SD_SCK, SD_MOSI, SD_CS} = 'Z;
 assign {SDRAM_DQ, SDRAM_A, SDRAM_BA, SDRAM_CLK, SDRAM_CKE, SDRAM_DQML, SDRAM_DQMH, SDRAM_nWE, SDRAM_nCAS, SDRAM_nRAS, SDRAM_nCS} = 'Z;
@@ -229,10 +257,10 @@ localparam CONF_STR = {
 	"O6,Rotate video,Off,On;",
 	"O7,Flip video,Off,On;",
 	"-;",
-	// [MiSTer-DB9 BEGIN] - DB9/SNAC8 support
-	"OUV,UserIO Joystick,Off,DB9MD,DB15;",
+	// [MiSTer-DB9-Pro BEGIN] - Saturn-first joy_type (2-player always enabled)
+	"O[127:126],UserIO Joystick,Off,Saturn,DB9MD,DB15;",
 	"-;",
-	// [MiSTer-DB9 END]
+	// [MiSTer-DB9-Pro END]
 	"RA,Open menu;",
 	"-;",
 	"F0,BIN,Load BIOS;",
@@ -244,7 +272,9 @@ localparam CONF_STR = {
 	"V,v",`BUILD_DATE
 };
 
-wire [31:0] status;
+// [MiSTer-DB9 BEGIN] - widened to 128 bits for joy_type at [127:126]
+wire [127:0] status;
+// [MiSTer-DB9 END]
 wire  [1:0] buttons;
 wire        forced_scandoubler;
 wire        video_rotated;
@@ -259,36 +289,13 @@ wire  [7:0] ioctl_index;
 
 // [MiSTer-DB9 BEGIN] - DB9/SNAC8 support
 wire [31:0] joystick_0_USB, joystick_1_USB;
-wire [11:0] joydb_1, joydb_2;
-wire        joydb_1ena = |JOY_FLAG[2:1];
-wire        joydb_2ena = joydb_1ena; // 2-player always enabled
-
-wire [11:0] JOYDB9MD_1, JOYDB9MD_2;
-wire [15:0] JOYDB15_1, JOYDB15_2;
-assign joydb_1 = JOY_FLAG[2] ? JOYDB9MD_1 : JOY_FLAG[1] ? JOYDB15_1[11:0] : 12'b0;
-assign joydb_2 = JOY_FLAG[2] ? JOYDB9MD_2 : JOY_FLAG[1] ? JOYDB15_2[11:0] : 12'b0;
-
-joy_db9md joy_db9md (
-	.clk       (CLK_JOY),
-	.joy_split (JOY_SPLIT),
-	.joy_mdsel (JOY_MDSEL),
-	.joy_in    (JOY_MDIN),
-	.joystick1 (JOYDB9MD_1),
-	.joystick2 (JOYDB9MD_2)
-);
-joy_db15 joy_db15 (
-	.clk       (CLK_JOY),
-	.JOY_CLK   (JOY_CLK),
-	.JOY_DATA  (JOY_DATA),
-	.JOY_LOAD  (JOY_LOAD),
-	.joystick1 (JOYDB15_1),
-	.joystick2 (JOYDB15_2)
-);
 
 // Diagnostic intent: each slot shows only its own port (no cross-routing of USB pad 0 → joystick_1).
 // joydb bits 11/10 = Mode|Select / Start; CONF_STR expects bits 11/10 = Start / Select — swap.
-wire [31:0] joystick_0 = joydb_1ena ? {20'b0, joydb_1[10], joydb_1[11], joydb_1[9:0]} : joystick_0_USB;
-wire [31:0] joystick_1 = joydb_2ena ? {20'b0, joydb_2[10], joydb_2[11], joydb_2[9:0]} : joystick_1_USB;
+// Bit 12 carries Saturn L_trigger (zero for DB9MD/DB15 helpers); Saturn R is
+// exposed at bit 11 alongside Mode/Select, so a single indicator covers all three.
+wire [31:0] joystick_0 = joydb_1ena ? (OSD_STATUS ? 32'b0 : {19'b0, joydb_1[12], joydb_1[10], joydb_1[11], joydb_1[9:0]}) : joystick_0_USB;
+wire [31:0] joystick_1 = joydb_2ena ? (OSD_STATUS ? 32'b0 : {19'b0, joydb_2[12], joydb_2[10], joydb_2[11], joydb_2[9:0]}) : joystick_1_USB;
 // [MiSTer-DB9 END]
 wire [31:0] joystick_2;
 wire [31:0] joystick_3;
@@ -343,7 +350,7 @@ hps_io #(.CONF_STR(CONF_STR)) hps_io
 	// [MiSTer-DB9 BEGIN] - DB9/SNAC8 support
 	.joystick_0(joystick_0_USB),
 	.joystick_1(joystick_1_USB),
-	.joy_raw(OSD_STATUS ? ({USER_MODE, joydb_1 | joydb_2}) : 14'b0),
+	.joy_raw(OSD_STATUS ? joy_raw_payload : 16'b0),
 	// [MiSTer-DB9 END]
 	.joystick_2(joystick_2),
 	.joystick_3(joystick_3),
@@ -467,8 +474,8 @@ system system(
 	.dn_wr(ioctl_wr),
 	.dn_index(ioctl_index),
 	.joystick({joystick_5,joystick_4,joystick_3,joystick_2,joystick_1,joystick_0}),
-	// [MiSTer-DB9 BEGIN] - DB9/SNAC8 support
-	.joy_mode(JOY_FLAG),
+	// [MiSTer-DB9 BEGIN] - DB9/SNAC8 support: joy_mode = {DB9MD, DB15, Saturn}
+	.joy_mode({(joy_type == 2'd2), (joy_type == 2'd3), (joy_type == 2'd1)}),
 	// [MiSTer-DB9 END]
 	.analog_l({joystick_l_analog_5,joystick_l_analog_4,joystick_l_analog_3,joystick_l_analog_2,joystick_l_analog_1,joystick_l_analog_0}),
 	.analog_r({joystick_r_analog_5,joystick_r_analog_4,joystick_r_analog_3,joystick_r_analog_2,joystick_r_analog_1,joystick_r_analog_0}),

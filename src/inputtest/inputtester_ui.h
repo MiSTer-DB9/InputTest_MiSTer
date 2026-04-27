@@ -30,9 +30,10 @@ extern void page_frame(bool showMenuButton, bool showContinueButton);
 extern void draw_pad(char xo, char yo);
 
 // [MiSTer-DB9 BEGIN] - DB9/SNAC8 support
-// Draw 6-button pad outline (Genesis / NeoGeo style — no L/R shoulders).
-// show_md_box: true → top-right Mode box (Megadrive); false → body only (DB15).
-extern void draw_pad_md(char xo, char yo, bool show_md_box);
+// Draw 6-button pad outline (Genesis / NeoGeo / Saturn style).
+// show_md_box: top-right Mode box (Megadrive).
+// show_lr_shoulders: USB-style L+R shoulder boxes (Saturn).
+extern void draw_pad_md(char xo, char yo, bool show_md_box, bool show_lr_shoulders);
 // [MiSTer-DB9 END]
 
 // Draw game pad outline
