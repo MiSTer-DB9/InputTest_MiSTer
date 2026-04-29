@@ -68,8 +68,9 @@ char modeswitchtimer_start = 0;
 char history[HISTORY_LENGTH];
 
 #define PAD_COUNT 2
-// [MiSTer-DB9-Pro BEGIN] - bumped 12→14 to host Saturn L/R trigger slots at 12/13
-#define BUTTON_COUNT 14
+// [MiSTer-DB9-Pro BEGIN] - bumped 12→13 to host Saturn L trigger at slot 12
+// (Saturn R reuses slot 10, the MD-Mode / DB15-Sel slot, via the SV [11]<->[10] swap).
+#define BUTTON_COUNT 13
 // [MiSTer-DB9-Pro END]
 
 char pad_offset_x[PAD_COUNT] = {7, 7};
@@ -87,8 +88,7 @@ char button_symbol[BUTTON_COUNT][6] = {
     "R",
     "Sel",
     "Start",
-    // [MiSTer-DB9-Pro BEGIN] - slots 12/13 reserved for Saturn L/R triggers
-    "",
+    // [MiSTer-DB9-Pro BEGIN] - slot 12 reserved for Saturn L trigger
     ""
     // [MiSTer-DB9-Pro END]
     };
@@ -105,31 +105,32 @@ char button_name[BUTTON_COUNT][12] = {
     "R",
     "Select",
     "Start",
-    // [MiSTer-DB9-Pro BEGIN] - slots 12/13 reserved for Saturn L/R triggers
-    "L Trigger",
-    "R Trigger"
+    // [MiSTer-DB9-Pro BEGIN] - slot 12 reserved for Saturn L trigger
+    "L Trigger"
     // [MiSTer-DB9-Pro END]
     };
-char button_x[BUTTON_COUNT] = {6, 2, 4, 4, 24, 22, 22, 20, 3, 23, 9, 13, 0, 0};
-char button_y[BUTTON_COUNT] = {5, 5, 6, 4,  5,  6,  4,  5, 1,  1, 5,  5, 0, 0};
+char button_x[BUTTON_COUNT] = {6, 2, 4, 4, 24, 22, 22, 20, 3, 23, 9, 13, 0};
+char button_y[BUTTON_COUNT] = {5, 5, 6, 4,  5,  6,  4,  5, 1,  1, 5,  5, 0};
 
 // [MiSTer-DB9 BEGIN] - DB9/SNAC8 support
-// Genesis 6-button (R L D U A B C X Y Z Mode Start) — slots 12/13 unused
+// Genesis 6-button (R L D U A B C X Y Z Mode Start) — slot 12 unused
 // Mode sits where the R shoulder is on a real Megadrive controller (top-right of body).
-char button_symbol_md[BUTTON_COUNT][6] = {"R","L","D","U","A","B","C","X","Y","Z","Mode","Start","",""};
-char button_x_md[BUTTON_COUNT]         = {  6,  2,  4,  4, 20, 22, 24, 20, 22, 24,   21,    11, 0, 0};
-char button_y_md[BUTTON_COUNT]         = {  5,  5,  6,  4,  6,  6,  6,  4,  4,  4,    1,     5, 0, 0};
+char button_symbol_md[BUTTON_COUNT][6] = {"R","L","D","U","A","B","C","X","Y","Z","Mode","Start",""};
+char button_x_md[BUTTON_COUNT]         = {  6,  2,  4,  4, 20, 22, 24, 20, 22, 24,   21,    11, 0};
+char button_y_md[BUTTON_COUNT]         = {  5,  5,  6,  4,  6,  6,  6,  4,  4,  4,    1,     5, 0};
 
-// NeoGeo / DB15 (R L D U A B C D E F Sel Start) — slots 12/13 unused
-char button_symbol_db15[BUTTON_COUNT][6] = {"R","L","D","U","A","B","C","D","E","F","Sel","Start","",""};
-char button_x_db15[BUTTON_COUNT]         = {  6,  2,  4,  4, 20, 22, 24, 20, 22, 24,    9,    13, 0, 0};
-char button_y_db15[BUTTON_COUNT]         = {  5,  5,  6,  4,  6,  6,  6,  4,  4,  4,    5,     5, 0, 0};
+// NeoGeo / DB15 (R L D U A B C D E F Sel Start) — slot 12 unused
+char button_symbol_db15[BUTTON_COUNT][6] = {"R","L","D","U","A","B","C","D","E","F","Sel","Start",""};
+char button_x_db15[BUTTON_COUNT]         = {  6,  2,  4,  4, 20, 22, 24, 20, 22, 24,    9,    13, 0};
+char button_y_db15[BUTTON_COUNT]         = {  5,  5,  6,  4,  6,  6,  6,  4,  4,  4,    5,     5, 0};
 // [MiSTer-DB9 END]
 
-// [MiSTer-DB9-Pro BEGIN] - Saturn layout: dpad + ABC/XYZ face + Start at slot 11, L at slot 12 (joydb_1[12]), R at slot 13 (joydb_1[13])
-char button_symbol_saturn[BUTTON_COUNT][6] = {"R","L","D","U","A","B","C","X","Y","Z","","Start","L","R"};
-char button_x_saturn[BUTTON_COUNT]         = {  6,  2,  4,  4, 20, 22, 24, 20, 22, 24, 0,    11,  3, 23};
-char button_y_saturn[BUTTON_COUNT]         = {  5,  5,  6,  4,  6,  6,  6,  4,  4,  4, 0,     5,  1,  1};
+// [MiSTer-DB9-Pro BEGIN] - Saturn layout: dpad + ABC/XYZ face + Start at slot 11, L at slot 12 (joydb_1[12]).
+// Saturn R sits at joydb_1[11] and the SV [11]<->[10] swap routes it to joystick_0[10] — same slot as
+// MD's "Mode" and DB15's "Sel" (a single indicator covers all three).
+char button_symbol_saturn[BUTTON_COUNT][6] = {"R","L","D","U","A","B","C","X","Y","Z","R","Start","L"};
+char button_x_saturn[BUTTON_COUNT]         = {  6,  2,  4,  4, 20, 22, 24, 20, 22, 24, 23,    11,  3};
+char button_y_saturn[BUTTON_COUNT]         = {  5,  5,  6,  4,  6,  6,  6,  4,  4,  4,  1,     5,  1};
 // [MiSTer-DB9-Pro END]
 
 // [MiSTer-DB9 BEGIN] - DB9/SNAC8 support: active layout pointers
