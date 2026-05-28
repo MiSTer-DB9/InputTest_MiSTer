@@ -36,8 +36,8 @@ module system (
 	input [191:0]	joystick,
 
 	// [MiSTer-DB9 BEGIN] - DB9/SNAC8 support
-	// {DB9MD, DB15, Saturn} from joy_type
-	input [2:0]		joy_mode,
+	// {P2 6btn, P1 6btn, DB9MD, DB15, Saturn} — top 2 bits from joydb's pad_*_6btn outputs
+	input [4:0]		joy_mode,
 	// [MiSTer-DB9 END]
 
 	// 6 devices, 16 bits each - -127..+127, Y: [15:8], X: [7:0]
@@ -290,7 +290,7 @@ assign cpu_din = pgrom_cs ? pgrom_data_out :
 				 music_cs ? music_data_out :
 				 system_menu_cs ? {8{menu_trigger}} :
 				 // [MiSTer-DB9 BEGIN] - DB9/SNAC8 support
-				 joy_mode_cs ? {5'b0, joy_mode} :
+				 joy_mode_cs ? {3'b0, joy_mode} :
 				 // [MiSTer-DB9 END]
 				 8'b00000000;
 

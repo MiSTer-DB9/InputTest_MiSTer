@@ -1,10 +1,10 @@
 ;--------------------------------------------------------
-; File Created by SDCC : free open source ISO C Compiler 
-; Version 4.4.0 #14620 (Linux)
+; File Created by SDCC : free open source ISO C Compiler
+; Version 4.5.0 #15242 (Linux)
 ;--------------------------------------------------------
 	.module os
-	.optsdcc -mz80
 	
+	.optsdcc -mz80 sdcccall(1)
 ;--------------------------------------------------------
 ; Public variables in this module
 ;--------------------------------------------------------
@@ -120,12 +120,10 @@ _musicram	=	0x8b10
 ; ---------------------------------
 _app_main::
 ;os.c:35: chram_size = chram_cols * chram_rows;
-	ld	a, (_chram_rows+0)
+	ld	a, (_chram_rows)
 	ld	e, a
-	ld	a, (_chram_cols+0)
+	ld	a, (_chram_cols)
 	ld	h, a
-;	spillPairReg hl
-;	spillPairReg hl
 	ld	l, #0x00
 	ld	d, l
 	ld	b, #0x08
@@ -183,22 +181,22 @@ _app_main::
 ;os.c:42: switch (state)
 	ld	a, (_state+0)
 	dec	a
-	jp	Z,00101$
+	jp	Z, 00101$
 	ld	a, (_state+0)
 	sub	a, #0x02
-	jp	Z,00102$
+	jp	Z, 00102$
 	ld	a, (_state+0)
 	sub	a, #0x03
-	jp	Z,00103$
+	jp	Z, 00103$
 	ld	a, (_state+0)
 	sub	a, #0x04
-	jp	Z,00104$
+	jp	Z, 00104$
 	ld	a, (_state+0)
 	sub	a, #0x05
-	jp	Z,00105$
+	jp	Z, 00105$
 	ld	a, (_state+0)
 	sub	a, #0x06
-	jp	Z,00106$
+	jp	Z, 00106$
 	ld	a, (_state+0)
 	sub	a, #0x07
 	jr	Z, 00107$
@@ -247,7 +245,7 @@ _app_main::
 ;os.c:45: start_inputtester_digital();
 	call	_start_inputtester_digital
 ;os.c:46: break;
-	jp	00122$
+	jr	00122$
 ;os.c:47: case STATE_INPUTTESTER:
 00102$:
 ;os.c:48: inputtester_digital();
@@ -329,8 +327,8 @@ _app_main::
 ;os.c:93: case STATE_START_ATTRACT:
 00115$:
 ;os.c:94: state = 0;
-	ld	hl, #_state
-	ld	(hl), #0x00
+	xor	a, a
+	ld	(_state+0), a
 ;os.c:95: loader("SNEK.AZN");
 	ld	hl, #___str_0
 	call	_loader
@@ -365,8 +363,8 @@ _app_main::
 ;os.c:111: case STATE_START_ZORBLAXX:
 00120$:
 ;os.c:112: state = 0;
-	ld	hl, #_state
-	ld	(hl), #0x00
+	xor	a, a
+	ld	(_state+0), a
 ;os.c:113: loader("ZORBLAXX.AZN");
 	ld	hl, #___str_1
 	call	_loader
