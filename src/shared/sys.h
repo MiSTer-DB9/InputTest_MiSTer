@@ -45,11 +45,15 @@ unsigned char __at(0x8A20) starfield3[5];
 unsigned char __at(0x8A30) system_pause;
 unsigned char __at(0x8A31) system_menu;
 // [MiSTer-DB9 BEGIN] - DB9/SNAC8 support
-unsigned char __at(0x8A32) joy_mode; // bit2: DB9MD, bit1: DB15, bit0: Saturn
-#define JOY_MODE_DB9MD  2
-#define JOY_MODE_DB15   1
+// bit4: P2 pad is 6-btn, bit3: P1 pad is 6-btn (DB9MD handshake; Saturn=1; DB15=0)
+// bit2: DB9MD, bit1: DB15, bit0: Saturn
+unsigned char __at(0x8A32) joy_mode;
+#define JOY_MODE_DB9MD      2
+#define JOY_MODE_DB15       1
+#define JOY_MODE_PAD1_6BTN  3
+#define JOY_MODE_PAD2_6BTN  4
 // [MiSTer-DB9-Pro BEGIN] - Saturn layout
-#define JOY_MODE_SATURN 0
+#define JOY_MODE_SATURN     0
 // [MiSTer-DB9-Pro END]
 // [MiSTer-DB9 END]
 

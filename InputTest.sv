@@ -198,11 +198,26 @@ wire   [7:0] USER_OUT_DRIVE;
 wire   [7:0] USER_PP_DRIVE;
 wire  [15:0] joydb_1, joydb_2;
 wire         joydb_1ena, joydb_2ena;
+wire         pad_1_6btn, pad_2_6btn;
 wire  [15:0] joy_raw_payload;
 
+// [MiSTer-DB9 BEGIN] - DB9/SNAC8 support: probe-gating wires
+// SNAC cores: replace 1'b0 with the core's SNAC enable expression so SNAC
+// preempts the joydb wrapper on shared USER_IO pins. Default 1'b0 is no-op.
+wire         snac_active     = 1'b0;
+// MT32-pi probe-suppression gate. Auto-detected from MT32 signals declared
+// elsewhere in this file (mt32_disable / mt32_use / mt32_on_primary). Hand-edit
+// if the heuristic missed your core's gate expression. Suppresses the OSD-open
+// autodetect probe so it doesn't read the RPi's I2C master traffic as a ghost
+// Saturn signature. See the fork hazard notes.
+wire         mt32_primary_active = 1'b0;
+// [MiSTer-DB9 END]
 joydb joydb (
   .clk             ( CLK_JOY         ),
   .USER_IN         ( USER_IN         ),
+  .OSD_STATUS          ( OSD_STATUS          ),
+  .snac_active         ( snac_active         ),
+  .mt32_primary_active ( mt32_primary_active ),
   .joy_type        ( joy_type        ),
   .joy_2p          ( joy_2p          ),
   .saturn_unlocked ( 1'b1            ),
@@ -213,6 +228,8 @@ joydb joydb (
   .joydb_2         ( joydb_2         ),
   .joydb_1ena      ( joydb_1ena      ),
   .joydb_2ena      ( joydb_2ena      ),
+  .pad_1_6btn      ( pad_1_6btn      ),
+  .pad_2_6btn      ( pad_2_6btn      ),
   .joy_raw         ( joy_raw_payload )
 );
 
@@ -474,8 +491,10 @@ system system(
 	.dn_wr(ioctl_wr),
 	.dn_index(ioctl_index),
 	.joystick({joystick_5,joystick_4,joystick_3,joystick_2,joystick_1,joystick_0}),
-	// [MiSTer-DB9 BEGIN] - DB9/SNAC8 support: joy_mode = {DB9MD, DB15, Saturn}
-	.joy_mode({(joy_type == 2'd2), (joy_type == 2'd3), (joy_type == 2'd1)}),
+	// [MiSTer-DB9 BEGIN] - DB9/SNAC8 support: joy_mode = {P2 6btn, P1 6btn, DB9MD, DB15, Saturn}
+	// Bottom 3 bits unchanged (preserve JOY_MODE_DB9MD/_DB15/_SATURN macros in sys.h).
+	// pad_*_6btn comes from sys/joydb.sv: latched 6-btn handshake for DB9MD, 1 for Saturn, 0 for DB15.
+	.joy_mode({pad_2_6btn, pad_1_6btn, (joy_type == 2'd2), (joy_type == 2'd3), (joy_type == 2'd1)}),
 	// [MiSTer-DB9 END]
 	.analog_l({joystick_l_analog_5,joystick_l_analog_4,joystick_l_analog_3,joystick_l_analog_2,joystick_l_analog_1,joystick_l_analog_0}),
 	.analog_r({joystick_r_analog_5,joystick_r_analog_4,joystick_r_analog_3,joystick_r_analog_2,joystick_r_analog_1,joystick_r_analog_0}),

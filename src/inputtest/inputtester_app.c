@@ -119,6 +119,12 @@ char button_symbol_md[BUTTON_COUNT][6] = {"R","L","D","U","A","B","C","X","Y","Z
 char button_x_md[BUTTON_COUNT]         = {  6,  2,  4,  4, 20, 22, 24, 20, 22, 24,   21,    11, 0};
 char button_y_md[BUTTON_COUNT]         = {  5,  5,  6,  4,  6,  6,  6,  4,  4,  4,    1,     5, 0};
 
+// Genesis 3-button (R L D U A B C Start) — X/Y/Z/Mode slots blanked so they're not drawn.
+// Picked when joydb's per-player pad_*_6btn flag is 0 (handshake never asserted).
+char button_symbol_md3[BUTTON_COUNT][6] = {"R","L","D","U","A","B","C","","","","","Start",""};
+char button_x_md3[BUTTON_COUNT]         = {  6,  2,  4,  4, 20, 22, 24,  0, 0, 0, 0,    11, 0};
+char button_y_md3[BUTTON_COUNT]         = {  5,  5,  6,  4,  6,  6,  6,  0, 0, 0, 0,     5, 0};
+
 // NeoGeo / DB15 (R L D U A B C D E F Sel Start) — slot 12 unused
 char button_symbol_db15[BUTTON_COUNT][6] = {"R","L","D","U","A","B","C","D","E","F","Sel","Start",""};
 char button_x_db15[BUTTON_COUNT]         = {  6,  2,  4,  4, 20, 22, 24, 20, 22, 24,    9,    13, 0};
@@ -133,12 +139,15 @@ char button_x_saturn[BUTTON_COUNT]         = {  6,  2,  4,  4, 20, 22, 24, 20, 2
 char button_y_saturn[BUTTON_COUNT]         = {  5,  5,  6,  4,  6,  6,  6,  4,  4,  4,  1,     5,  1};
 // [MiSTer-DB9-Pro END]
 
-// [MiSTer-DB9 BEGIN] - DB9/SNAC8 support: active layout pointers
-// Active layout pointers — reassigned in page_inputtester_digital() based on joy_mode.
-char (*active_symbol)[6] = button_symbol;
-char *active_x = button_x;
-char *active_y = button_y;
-// Last-seen joy_mode bits (DB9MD|DB15|Saturn) to detect runtime changes and trigger redraw.
+// [MiSTer-DB9 BEGIN] - DB9/SNAC8 support: per-pad active layout pointers
+// Reassigned in page_inputtester_digital() based on joy_mode bits.
+// Per-pad so 3-btn / 6-btn MD detect (joydb pad_*_6btn) can switch one pad's
+// layout independently of the other.
+char (*active_symbol[PAD_COUNT])[6] = {button_symbol, button_symbol};
+char *active_x[PAD_COUNT] = {button_x, button_x};
+char *active_y[PAD_COUNT] = {button_y, button_y};
+// Last-seen joy_mode byte (5 bits: P2_6btn|P1_6btn|DB9MD|DB15|Saturn) to detect
+// runtime changes (mode switch, controller plug/unplug, 3↔6 swap) and trigger redraw.
 unsigned char joy_mode_last = 0xFF;
 // [MiSTer-DB9 END]
 #define color_button_active 0xFF
@@ -203,29 +212,36 @@ unsigned char gunsight_crosshair_index = 15;
 void page_inputtester_digital()
 {
     page_frame(true, false);
-    // [MiSTer-DB9 BEGIN] - DB9/SNAC8 support: pick layout based on UserIO Joystick mode
+    // [MiSTer-DB9 BEGIN] - DB9/SNAC8 support: pick layout per pad based on UserIO Joystick mode
     bool md = CHECK_BIT(joy_mode, JOY_MODE_DB9MD);
     bool db15 = !md && CHECK_BIT(joy_mode, JOY_MODE_DB15);
     // [MiSTer-DB9-Pro BEGIN] - Saturn layout selection
     bool saturn = !md && !db15 && CHECK_BIT(joy_mode, JOY_MODE_SATURN);
-    if (md) { active_symbol = button_symbol_md; active_x = button_x_md; active_y = button_y_md; }
-    else if (db15) { active_symbol = button_symbol_db15; active_x = button_x_db15; active_y = button_y_db15; }
-    else if (saturn) { active_symbol = button_symbol_saturn; active_x = button_x_saturn; active_y = button_y_saturn; }
-    else { active_symbol = button_symbol; active_x = button_x; active_y = button_y; }
     // [MiSTer-DB9-Pro END]
     joy_mode_last = joy_mode;
-    // [MiSTer-DB9 END]
     // Draw pads
     for (char j = 0; j < PAD_COUNT; j++)
     {
+        // Per-pad 6-btn handshake bit (joydb's pad_*_6btn output). Only meaningful for DB9MD;
+        // 1 for Saturn (always 6-btn-shaped), 0 for DB15 (no row geometry).
+        bool pad6 = CHECK_BIT(joy_mode, j == 0 ? JOY_MODE_PAD1_6BTN : JOY_MODE_PAD2_6BTN);
+        // Pick this pad's symbol/x/y tables.
+        if (md && pad6)    { active_symbol[j] = button_symbol_md;     active_x[j] = button_x_md;     active_y[j] = button_y_md;     }
+        else if (md)       { active_symbol[j] = button_symbol_md3;    active_x[j] = button_x_md3;    active_y[j] = button_y_md3;    }
+        else if (db15)     { active_symbol[j] = button_symbol_db15;   active_x[j] = button_x_db15;   active_y[j] = button_y_db15;   }
+        // [MiSTer-DB9-Pro BEGIN] - Saturn per-pad table
+        else if (saturn)   { active_symbol[j] = button_symbol_saturn; active_x[j] = button_x_saturn; active_y[j] = button_y_saturn; }
+        // [MiSTer-DB9-Pro END]
+        else               { active_symbol[j] = button_symbol;        active_x[j] = button_x;        active_y[j] = button_y;        }
+
         write_stringf("JOY %d", 0xFF, pad_offset_x[j] - 5, pad_offset_y[j] + 5, j + 1);
-        // [MiSTer-DB9 BEGIN] - DB9/SNAC8 support: alt pad shapes
+        // Pad outline: MD body for DB9MD (Mode box only when 6-btn) / DB15 / Saturn; default body otherwise.
         // [MiSTer-DB9-Pro BEGIN] - Saturn uses MD body + USB-style L/R shoulder boxes
-        if (md || db15 || saturn) draw_pad_md(pad_offset_x[j], pad_offset_y[j], md, saturn);
+        if (md || db15 || saturn) draw_pad_md(pad_offset_x[j], pad_offset_y[j], md && pad6, saturn);
         // [MiSTer-DB9-Pro END]
         else draw_pad(pad_offset_x[j], pad_offset_y[j]);
-        // [MiSTer-DB9 END]
     }
+    // [MiSTer-DB9 END]
 }
 
 // Draw static elements for analog input test page
@@ -539,7 +555,7 @@ void inputtester_digital()
             for (char button = 0; button < BUTTON_COUNT; button++)
             {
                 char color = (button < 8 ? CHECK_BIT(joystick[index], button) : CHECK_BIT(joystick[index + 1], button - 8)) ? color_button_active : color_button_inactive;
-                write_string(active_symbol[button], color, pad_offset_x[joy] + active_x[button], pad_offset_y[joy] + active_y[button]);
+                write_string(active_symbol[joy][button], color, pad_offset_x[joy] + active_x[joy][button], pad_offset_y[joy] + active_y[joy][button]);
             }
             // SOCD detection
             socd_lr[joy] = CHECK_BIT(joystick[index], 0) && CHECK_BIT(joystick[index], 1);
