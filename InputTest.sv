@@ -367,7 +367,7 @@ hps_io #(.CONF_STR(CONF_STR)) hps_io
 	// [MiSTer-DB9 BEGIN] - DB9/SNAC8 support
 	.joystick_0(joystick_0_USB),
 	.joystick_1(joystick_1_USB),
-	.joy_raw(OSD_STATUS ? joy_raw_payload : 16'b0),
+	.joy_raw(joy_raw_payload),
 	// [MiSTer-DB9 END]
 	.joystick_2(joystick_2),
 	.joystick_3(joystick_3),
